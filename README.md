@@ -1,0 +1,71 @@
+# ltx23-toolkit
+
+Battle-tested ComfyUI workflows + a CLI helper for **LTX-2.3 22B** video generation with native audio — packaged so any ComfyUI user can install and run in minutes.
+
+What you get:
+- **AV single-shot** (`workflows/ltx23-av-singleshot.json`) — t2v or i2v, up to 15s in one generation, with LTX's native voices/dialogue/SFX and automatic lip-sync. Fast recipe: full bf16 distilled checkpoint, 8-step ManualSigmas, CFG 1 (~1.2s/frame on a 12GB GPU with RAM offload).
+- **Ingredients** (`workflows/ltx23-iclora-ingredients.json`) — reference-sheet character/prop/location consistency (IC-LoRA), 121-frame clips.
+- **Seamless long video** (`workflows/ltx23-seamless-long.json`) — LTXVExtendSampler chain: 15s+ continuous video (no cuts) via latent-overlap extension; video-only, add audio with a T2A pass.
+- **`scripts/videogen.py`** — patch → queue → poll → download → ffprobe QC in one command, with hard-won guardrails baked in.
+
+## Requirements
+
+- ComfyUI ≥ 0.25 with [ComfyUI-LTXVideo](https://github.com/Lightricks/ComfyUI-LTXVideo) custom nodes
+- Models (place in your ComfyUI model dirs):
+
+| File | Dir | Source |
+|---|---|---|
+| `ltx-2.3-22b-distilled-1.1.safetensors` (bf16, recommended) or `ltx-2.3-22b-dev-fp8.safetensors` | `checkpoints/` | [Lightricks/LTX-2.3](https://huggingface.co/Lightricks/LTX-2.3) / [LTX-2.3-fp8](https://huggingface.co/Lightricks/LTX-2.3-fp8) |
+| `ltx-2.3-22b-distilled-lora-384-1.1.safetensors` (only for the dev/fp8 route) | `loras/` | Lightricks/LTX-2.3 |
+| `ltx-2.3-22b-ic-lora-ingredients-0.9.safetensors` (Ingredients mode) | `loras/` | [LTX-2.3-22b-IC-LoRA-Ingredients](https://huggingface.co/Lightricks/LTX-2.3-22b-IC-LoRA-Ingredients) (gated) |
+| `gemma_3_12B_it_fpmixed.safetensors` + `ltx-2.3_text_projection_bf16.safetensors` | `text_encoders/` | Lightricks/LTX-2.3 |
+| `LTX23_video_vae_bf16.safetensors` (Ingredients workflow) | `vae/` | Lightricks/LTX-2.3 |
+
+Tested on Windows ComfyUI 0.25, 12GB VRAM + 100GB RAM. bf16 measured **faster** than fp8+LoRA (362s vs 439s per 15s clip) and sharper — offload cost is smaller than the extra LoRA pass.
+
+> Model filenames inside the workflow JSONs must match your local files — edit the `CheckpointLoaderSimple` / `LTXAVTextEncoderLoader` / lora nodes if yours differ.
+
+## Quick start
+
+```bash
+export COMFYUI_URL=http://127.0.0.1:8188   # your ComfyUI address
+
+printf '%s' "your prompt (see Prompt rules)" > /tmp/prompt.txt
+python3 scripts/videogen.py \
+  --workflow workflows/ltx23-av-singleshot.json \
+  --prompt-file /tmp/prompt.txt \
+  --frames 361 --width 928 --height 576 \
+  [--image start_frame.png] \
+  --out my_video.mp4
+```
+`--image` switches to i2v (start-frame conditioning); omit for t2v. Output JSON includes `gen_seconds`, stream specs and loudness.
+
+## The rules this toolkit enforces (learned the hard way)
+
+1. **15 s (361 frames) max per AV single-shot.** Beyond that, audio-mouth lip coupling decouples (voices play, mouths don't move) and held props start morphing into other objects. For longer videos use the seamless-long workflow (+ T2A audio) or concat 121f beats.
+2. **Frames must be 8n+1** (121 = 5s, 241 = 10s, 361 = 15s @ 24fps). Resolution in multiples of 32.
+3. **Ingredients mode composes only at ≤121 frames.** Longer runs regress to animating the reference sheet itself.
+4. **Script object hand-offs in prompts.** When a character switches held objects, write the release explicitly ("slides the blade into its scabbard, lets go, both hands empty, then grasps the ewer already standing on the table") and add "every object stays itself throughout" — otherwise the sword becomes the wine cup.
+5. **One GPU job at a time.** The helper refuses to queue while busy (`--allow-busy` to override).
+
+## Prompt format
+
+One flowing present-tense paragraph containing: shot/camera language, scene/lighting, ordered action beats, physical character description, dialogue in quotes with acting beats (`says in a low rasping voice: "..."`), and an audio design line (ambience + SFX + "no background music" unless wanted). For Ingredients mode use the two-part `### Reference Sheet Description` (positioned panel labels) + `### Target Description` structure — see the placeholder inside the workflow JSON.
+
+## QC recipe
+
+- `ffprobe` both streams; `volumedetect` max above ~-30 dB when dialogue is expected.
+- Extract frames every ~2s for composition/consistency; **every 0.5s across beat transitions to catch prop morphs** (stills lie about motion — check the actual video too).
+- Scripted dialogue? Transcribe the output audio with Whisper and diff against your lines.
+
+## Claude Code users
+
+`skill/videogen/SKILL.md` is a ready-made [Claude Code](https://claude.com/claude-code) skill: `cp -r skill/videogen ~/.claude/skills/` and invoke `/videogen <description>`. It wraps prompt authoring, mode selection, generation, and the QC recipe.
+
+## Seamless long video (>15s)
+
+`workflows/ltx23-seamless-long.json` chains LTXVExtendSampler: 121f base generation → +120f extensions conditioned on a 24-frame latent overlap, each extension with its own beat prompt → decode once. Patch points in the file's `_readme` (beat prompts at nodes 9002/9012, seeds 9005/9015). Extension passes must use plain `euler_ancestral` (cfg_pp samplers crash with the STG guider). Video-only: generate a matching soundtrack with the official T2A workflow and mux (`ffmpeg -map 0:v -map 1:a -c:v copy -c:a aac -b:a 128k`).
+
+## License
+
+MIT. Workflows adapted from [Lightricks/ComfyUI-LTXVideo](https://github.com/Lightricks/ComfyUI-LTXVideo) official examples (converted to API format, tuned, and hardened). LTX-2.3 model weights are governed by the LTX-2 Community License — not distributed here.
