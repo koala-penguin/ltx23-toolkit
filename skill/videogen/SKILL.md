@@ -44,7 +44,9 @@ Think through every fine detail like a production designer — the user expects 
 - **Composition**: explicit landscape/framing locks; reference panels cropped to landscape when output is landscape (portrait panels leak aspect → pillarboxed output).
 - **Voice/language**: named real people for voice match; language locks when scene context could pull dialogue into another language.
 - Walk the scene start-to-finish once and ask: what would a viewer notice is off?
-- **MSR background refs: visually inspect EVERY bg image before feeding** — the bg reference dominates; characters accidentally present in it WILL be generated. Bilateral scenes (two armies/flag sets): use per-side solo shots (drop LiconMSR input "2", single ref into slot 1) with per-side clean backgrounds — shared-background two-shots mix the sides structurally. Exact glyphs/logos on banners: draw them onto the bg reference image (PIL) — MSR copies them faithfully.
+- **MSR background refs: visually inspect EVERY bg image before feeding** — the bg reference dominates; characters accidentally present in it WILL be generated. Exact glyphs/logos on banners: draw them onto the bg reference image (PIL) — MSR copies them faithfully.
+- **Bilateral scenes (two armies/flag sets): composite the background** — build ONE bg image with each side's elements on its own half (center-weighted crops of clean per-side backgrounds, blurred seam) + a spatial prompt lock ("the LEFT half holds ONLY ..., the two groups never cross the middle") → a single continuous two-shot with zero cross-mixing. Solo shots (drop LiconMSR input "2", single ref into slot 1) remain useful for close-ups.
+- **Multi-language dialogue needs a full-dose language lock**: a preamble line ("X speaks ONLY English throughout") PLUS per-line reinforcement ("loudly IN ENGLISH ... every word in English"). When QC-ing with Whisper, note it auto-translates mixed-language audio — cut each speaker's segment by timestamp and transcribe it alone before declaring a defect.
 
 ## Prompt authoring (do this BEFORE calling the helper)
 
