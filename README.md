@@ -38,7 +38,9 @@ python3 scripts/videogen.py \
   [--image start_frame.png] \
   --out my_video.mp4
 ```
-`--image` switches to i2v (start-frame conditioning); omit for t2v. Output JSON includes `gen_seconds`, stream specs and loudness.
+`--image` switches to i2v (start-frame conditioning); omit for t2v — the helper flips the i2v-bypass node automatically. Output JSON includes `gen_seconds`, `mode`, `seed`, stream specs and loudness. The helper refuses a busy GPU (`--allow-busy` to override), validates frame/resolution rules, and prints `{"ok": false, ...}` JSON on every failure path (timeouts include the exact cancel command).
+
+For Claude Code users the bundled skill also defines sub-options: `/videogen <desc>` (default 15s single-shot), `/videogen beats <desc>` (per-beat Ingredients generation + concat), `/videogen long <desc>` (seamless >15s extension + T2A audio).
 
 ## The rules this toolkit enforces (learned the hard way)
 
@@ -49,6 +51,8 @@ python3 scripts/videogen.py \
 5. **One GPU job at a time.** The helper refuses to queue while busy (`--allow-busy` to override).
 
 ## Prompt format
+
+**Name real people directly** ("Donald Trump", "Uncle Roger") instead of generic descriptions — LTX matches the person's face AND voice characteristics automatically; generic descriptions get generic results. To force a dialogue language against a strong scene context, lock it explicitly ("declares loudly IN ENGLISH, in his American-accented voice, every word in English" — a Chinese-period setting will otherwise pull dialogue into Mandarin).
 
 One flowing present-tense paragraph containing: shot/camera language, scene/lighting, ordered action beats, physical character description, dialogue in quotes with acting beats (`says in a low rasping voice: "..."`), and an audio design line (ambience + SFX + "no background music" unless wanted). For Ingredients mode use the two-part `### Reference Sheet Description` (positioned panel labels) + `### Target Description` structure — see the placeholder inside the workflow JSON.
 
