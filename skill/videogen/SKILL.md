@@ -44,6 +44,7 @@ Think through every fine detail like a production designer — the user expects 
 - **Composition**: explicit landscape/framing locks; reference panels cropped to landscape when output is landscape (portrait panels leak aspect → pillarboxed output).
 - **Voice/language**: named real people for voice match; language locks when scene context could pull dialogue into another language.
 - Walk the scene start-to-finish once and ask: what would a viewer notice is off?
+- **MSR background refs: visually inspect EVERY bg image before feeding** — the bg reference dominates; characters accidentally present in it WILL be generated. Bilateral scenes (two armies/flag sets): use per-side solo shots (drop LiconMSR input "2", single ref into slot 1) with per-side clean backgrounds — shared-background two-shots mix the sides structurally. Exact glyphs/logos on banners: draw them onto the bg reference image (PIL) — MSR copies them faithfully.
 
 ## Prompt authoring (do this BEFORE calling the helper)
 
