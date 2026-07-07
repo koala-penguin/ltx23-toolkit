@@ -39,6 +39,7 @@ Mode toggle: the helper flips i2v/t2v automatically — `--image` present → i2
 ## Art-direction pass (MANDATORY before prompt authoring)
 
 Think through every fine detail like a production designer — the user expects these filled in WITHOUT being asked (non-negotiable):
+- **Brand/place identity**: video about a brand/store/place → collect its real visual assets FIRST (official logo, storefront, interior, products) and build them into the scene/background refs — the subject must be visible on screen, not only in dialogue.
 - **Faction/ownership logic**: whose army → whose flags/colors/insignia (Trump's army = American flags, Cao Cao's = hanzi banners). Props/mounts/uniforms consistent with each character's identity.
 - **Period & culture accuracy**: name the specific armor/weapons/architecture style ("han-dynasty riveted lamellar, ji halberds, vertical hanzi banners") AND exclude the failure mode ("no roman, no european armor") — unnamed extras default to generic/wrong.
 - **Composition**: explicit landscape/framing locks; reference panels cropped to landscape when output is landscape (portrait panels leak aspect → pillarboxed output).
