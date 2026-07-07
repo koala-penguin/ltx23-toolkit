@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""videogen.py — LTX-2.3 generation helper (ltx23-toolkit).
-
-Set COMFYUI_URL env var (default http://127.0.0.1:8188) or pass --server.
+"""videogen.py — LTX-2.3 generation helper for the /videogen skill.
 
 Patches a saved API-format ComfyUI workflow, queues it, polls to completion,
 downloads the mp4, runs ffprobe QC, and prints a JSON result (incl. gen seconds).
@@ -190,6 +188,7 @@ def main():
                             "-f", "null", "-"], capture_output=True, text=True)
                         maxvol = [l for l in vol.stderr.splitlines() if "max_volume" in l]
                         print(json.dumps({"ok": True, "prompt_id": pid, "gen_seconds": gen_s,
+                            "prompt_text": prompt_text,
                             "mode": "i2v" if a.image else "t2v", "seed": a.seed,
                             "file": out_path, "bytes": len(data),
                             "streams": json.loads(probe.stdout).get("streams", []),

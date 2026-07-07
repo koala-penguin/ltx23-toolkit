@@ -9,7 +9,7 @@ Wraps the verified 2026-07-07 pipeline. Full background: the toolkit README.
 
 ## Hard rules (non-negotiable)
 
-- **15s (361 frames) MAX per single-shot** — user-set limit; beyond it lip-sync decouples and props morph. Longer videos: ExtendSampler chain (see memory).
+- **15s (361 frames) MAX per single-shot** — hard limit; beyond it lip-sync decouples and props morph. Longer videos: ExtendSampler chain (see memory).
 - Frames must be **8n+1** (121=5s, 241=10s, 361=15s @24fps). Resolution multiples of 32 (default 928×576, 24fps).
 - **GPU sequential** — one ComfyUI job at a time, never parallel (set COMFYUI_URL).
 - **Report generation seconds** in every delivery (helper prints `gen_seconds`).
@@ -28,8 +28,9 @@ Wraps the verified 2026-07-07 pipeline. Full background: the toolkit README.
 
 | Situation | Mode | Workflow file (<toolkit>/workflows/) |
 |---|---|---|
-| Description + start-frame image (REQUIRED — no imageless runs) | **AV single-shot** (default; native voice/SFX, auto lip-sync) | `ltx23-av-singleshot.json` (bf16 distilled-1.1 — faster AND sharper than fp8) |
-| Same character/prop/location must persist across clips | **Ingredients** (121f units only!) | `ltx23-iclora-ingredients.json` |
+| Description + start-frame image, NO specific character refs | **AV single-shot** (native voice/SFX, auto lip-sync) | `ltx23-av-singleshot.json` (bf16 distilled-1.1 — faster AND sharper than fp8) |
+| **DEFAULT (any request with character reference images — user-set 2026-07-08)**: refs fed directly, likenesses hold, 0.56s/frame, 10s@50fps | **MSR (LiconMSR node)**: patch refs into nodes 29/40 + background 30; prompt MUST start with "Maintain strong reference consistency for both characters and the <X> background — do not change faces, hairstyles, costumes, or the background layout." | `ltx23-msr-multisubject.json` |
+| Single character/prop/location refsheet across clips | **Ingredients** (121f units only!) | `ltx23-iclora-ingredients.json` |
 | >15s seamless (video-only + T2A audio muxed after) | ExtendSampler chain — **helper insufficient**: patch beat prompts (9002/9012), seeds (9005/9015), num_new_frames (9006/9016) manually or via repeated `--set` | `ltx23-seamless-long.json` |
 | Establish-then-extend combo (motion continuity + 15s dialogue, weaker likeness lock) | Step 1: Ingredients 2-panel 121f to establish the scene → Step 2: extract the best composed frame (`ffmpeg -vf "select=eq(n\,60)" -vframes 1`) → Step 3: AV single-shot 361f i2v from that frame with the full multi-beat named-person dialogue prompt | both workflows in sequence |
 
@@ -51,7 +52,20 @@ Follow the official structure — one flowing present-tense paragraph (or `### R
 - Anti-collage line for Ingredients mode: "the frame is one single continuous cinematic shot — never a reference sheet, never split panels".
 - Complex authoring → invoke the `ltx-prompt` skill.
 
-## Generate
+## Generate — MSR (default)
+
+```bash
+python3 <toolkit>/scripts/videogen.py \
+  --workflow <toolkit>/workflows/ltx23-msr-multisubject.json \
+  --prompt-file /tmp/prompt.txt \
+  --map '{"prompt":"5","negative":"6","seed":"15","save":"20","frames":"50","latent":"__none__"}' \
+  --set 29.image=<ref1-uploaded-name> --set 40.image=<ref2-uploaded-name> --set 30.image=<bg-uploaded-name> \
+  --set 43.value=832 --set 44.value=544 \
+  --frames 121 --prefix <name> --out /tmp/<name>.mp4
+```
+(Upload refs first via `/upload/image`; MSR runs 50fps — frames node 50 holds PIXEL frame count, 501=10s. Simpler: patch `ltx23-msr-multisubject.json` directly per its `_readme` and POST /prompt.)
+
+## Generate — AV single-shot
 
 ```bash
 printf '%s' "$PROMPT" > /tmp/videogen_prompt.txt
@@ -76,4 +90,4 @@ Helper prints `{"ok": false, "error": ...}` on every failure: server unreachable
 
 ## Deliver
 
-Deliver to the user's channel: attach mp4 + **full settings (workflow, model, mode/start-frame, resolution/frames/fps, sampler config, seed) + the complete prompt text + 생성 N초** + any honest defect notes. Settings and prompts accompany EVERY deliverable. Never claim quality without the QC pass.
+Deliver to the user's channel: attach mp4 + **full settings (workflow, model, mode/start-frame, resolution/frames/fps, sampler config, seed) + the complete prompt text (helper echoes it as prompt_text in the result JSON — paste it verbatim, NEVER offer-on-request) + 생성 N초** + any honest defect notes. Settings and prompts accompany EVERY deliverable. Never claim quality without the QC pass.

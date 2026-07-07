@@ -5,6 +5,7 @@ Battle-tested ComfyUI workflows + a CLI helper for **LTX-2.3 22B** video generat
 What you get:
 - **AV single-shot** (`workflows/ltx23-av-singleshot.json`) — t2v or i2v, up to 15s in one generation, with LTX's native voices/dialogue/SFX and automatic lip-sync. Fast recipe: full bf16 distilled checkpoint, 8-step ManualSigmas, CFG 1 (~1.2s/frame on a 12GB GPU with RAM offload).
 - **Ingredients** (`workflows/ltx23-iclora-ingredients.json`) — reference-sheet character/prop/location consistency (IC-LoRA), 121-frame clips.
+- **MSR multi-subject** (`workflows/ltx23-msr-multisubject.json`) — feed up to 4 character reference images + a background reference DIRECTLY into the LiconMSR node (requires the community `LTX-2.3-Licon-MSR-V1` LoRA): both/all likenesses hold simultaneously in one continuous shot, ~0.56s/frame at 50fps. Start your prompt with "Maintain strong reference consistency for both characters and the background — do not change faces, hairstyles, costumes, or the background layout." Best route for multi-character dialogue scenes.
 - **Seamless long video** (`workflows/ltx23-seamless-long.json`) — LTXVExtendSampler chain: 15s+ continuous video (no cuts) via latent-overlap extension; video-only, add audio with a T2A pass.
 - **`scripts/videogen.py`** — patch → queue → poll → download → ffprobe QC in one command, with hard-won guardrails baked in.
 
