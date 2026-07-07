@@ -13,6 +13,7 @@ Wraps the verified 2026-07-07 pipeline. Full background: the toolkit README.
 - Frames must be **8n+1** (121=5s, 241=10s, 361=15s @24fps). Resolution multiples of 32 (default 928×576, 24fps).
 - **GPU sequential** — one ComfyUI job at a time, never parallel (set COMFYUI_URL).
 - **Report generation seconds** in every delivery (helper prints `gen_seconds`).
+- **ALWAYS use a start/reference image (i2v or Ingredients) — never plain t2v** (user rule 2026-07-07 "t2v 하지 말랑께"): source or generate a fitting reference/start image first (user photos, prior gen frames, Wikimedia stills, or a quick Ingredients establish shot).
 - Heavy generation runs in **background** (Bash run_in_background or agent) so the session stays responsive; text-channel request → deliver file to text channel.
 
 ## Sub-options (first word of the /videogen argument)
@@ -27,12 +28,21 @@ Wraps the verified 2026-07-07 pipeline. Full background: the toolkit README.
 
 | Situation | Mode | Workflow file (<toolkit>/workflows/) |
 |---|---|---|
-| Description only, or description + start-frame image | **AV single-shot** (default; native voice/SFX, auto lip-sync) | `ltx23-av-singleshot.json` (bf16 distilled-1.1 — faster AND sharper than fp8) |
+| Description + start-frame image (REQUIRED — no imageless runs) | **AV single-shot** (default; native voice/SFX, auto lip-sync) | `ltx23-av-singleshot.json` (bf16 distilled-1.1 — faster AND sharper than fp8) |
 | Same character/prop/location must persist across clips | **Ingredients** (121f units only!) | `ltx23-iclora-ingredients.json` |
 | >15s seamless (video-only + T2A audio muxed after) | ExtendSampler chain — **helper insufficient**: patch beat prompts (9002/9012), seeds (9005/9015), num_new_frames (9006/9016) manually or via repeated `--set` | `ltx23-seamless-long.json` |
 | Establish-then-extend combo (motion continuity + 15s dialogue, weaker likeness lock) | Step 1: Ingredients 2-panel 121f to establish the scene → Step 2: extract the best composed frame (`ffmpeg -vf "select=eq(n\,60)" -vframes 1`) → Step 3: AV single-shot 361f i2v from that frame with the full multi-beat named-person dialogue prompt | both workflows in sequence |
 
 Mode toggle: the helper flips i2v/t2v automatically — `--image` present → i2v (bypass node 4977 set false), absent → t2v (bypass true; image node ignored). Ingredients refsheets: pre-resize shorter side to latent height; AV single-shot resizes internally (node 4981).
+
+## Art-direction pass (MANDATORY before prompt authoring)
+
+Think through every fine detail like a production designer — the user expects these filled in WITHOUT being asked (non-negotiable):
+- **Faction/ownership logic**: whose army → whose flags/colors/insignia (Trump's army = American flags, Cao Cao's = hanzi banners). Props/mounts/uniforms consistent with each character's identity.
+- **Period & culture accuracy**: name the specific armor/weapons/architecture style ("han-dynasty riveted lamellar, ji halberds, vertical hanzi banners") AND exclude the failure mode ("no roman, no european armor") — unnamed extras default to generic/wrong.
+- **Composition**: explicit landscape/framing locks; reference panels cropped to landscape when output is landscape (portrait panels leak aspect → pillarboxed output).
+- **Voice/language**: named real people for voice match; language locks when scene context could pull dialogue into another language.
+- Walk the scene start-to-finish once and ask: what would a viewer notice is off?
 
 ## Prompt authoring (do this BEFORE calling the helper)
 
